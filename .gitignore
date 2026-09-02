@@ -1,0 +1,11 @@
+# Byte-compiled / cached Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Test and linter caches
+.pytest_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
