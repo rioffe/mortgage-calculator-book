@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.13.5",
+    "pyqt5>=5.15.11",
     "python-dotenv>=1.2.3",
     "requests>=2.34.2",
 ]
