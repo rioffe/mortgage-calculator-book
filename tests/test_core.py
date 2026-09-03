@@ -1,4 +1,5 @@
 import pytest
+
 from mortgage_calculator_book.core import calculate_payment
 
 

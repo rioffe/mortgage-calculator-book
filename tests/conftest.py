@@ -1,5 +1,6 @@
 import pytest
 
+
 @pytest.fixture
 def worked_example():
     """The Chapter 4.5 answer key: $200,000 / 6% / 30yr monthly."""
