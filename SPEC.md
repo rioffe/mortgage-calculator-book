@@ -18,6 +18,14 @@ years, and a payment frequency.
 ## Outputs
 - payment: the fixed amount paid each period
 
+## Interfaces
+- Command-line interface (human-readable and JSON output)
+- Desktop GUI:
+  - Inputs: principal, annual rate, term (years), payments per year
+  - Actions: Calculate (computes and displays the payment), Clear
+    (resets all fields and the result)
+  - Invalid input shows an error message in place, not a crash
+
 ## What "correct" means
 The computed payment, multiplied by n_payments, should equal the
 total amount paid over the life of the loan. For principal =
