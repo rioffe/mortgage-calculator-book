@@ -1,6 +1,8 @@
-# tests/test_llm_cli.py
+import json
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+from mortgage_calculator_book.config import HOSTED_MODEL
 from mortgage_calculator_book.llm_cli import build_parser, main
 
 
@@ -132,9 +134,72 @@ def test_parser_defaults():
     parser = build_parser()
     # No positional args -> empty question list (triggers the REPL).
     assert parser.parse_args([]).question == []
-    # The default model comes from the module constant.
-    assert parser.parse_args(["hi"]).model == "qwen3:8b"
+    # The model default is resolved per-mode in main(), not baked into the parser.
+    assert parser.parse_args(["hi"]).model is None
+    assert parser.parse_args(["hi"]).hosted is False
+    # --hosted is a flag (store_true).
+    assert parser.parse_args(["--hosted"]).hosted is True
     # A --model override is honoured; separate tokens are collected separately.
     args = parser.parse_args(["--model", "llama3.2", "ask", "me"])
     assert args.model == "llama3.2"
     assert args.question == ["ask", "me"]
+
+
+def _hosted_client(answer: str = "$1,199.10.") -> tuple[SimpleNamespace, MagicMock]:
+    call = SimpleNamespace(
+        id="call_1",
+        function=SimpleNamespace(
+            name="calculate_mortgage_payment",
+            arguments=json.dumps(
+                {
+                    "principal": 200000,
+                    "annual_rate": 0.06,
+                    "term_years": 30,
+                    "payments_per_year": 12,
+                }
+            ),
+        ),
+    )
+    first = SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content="", tool_calls=[call]))]
+    )
+    second = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=answer))])
+    create = MagicMock(side_effect=[first, second])
+    client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+    return client, create
+
+
+def test_hosted_uses_hosted_model_by_default(monkeypatch, capsys):
+    client, create = _hosted_client()
+    monkeypatch.setattr("mortgage_calculator_book.llm._client", client)
+    ollama_mock = MagicMock(side_effect=[])
+    monkeypatch.setattr("mortgage_calculator_book.llm.ollama.chat", ollama_mock)
+
+    code = main(["what", "is", "my", "payment", "--hosted"])
+
+    assert code == 0
+    assert "1,199.10" in capsys.readouterr().out
+    assert all(c.kwargs["model"] == HOSTED_MODEL for c in create.call_args_list)
+    assert ollama_mock.call_count == 0  # the local path was never taken
+
+
+def test_hosted_model_override(monkeypatch):
+    client, create = _hosted_client()
+    monkeypatch.setattr("mortgage_calculator_book.llm._client", client)
+
+    main(["hi", "--hosted", "--model", "meta/llama3"])
+
+    assert all(c.kwargs["model"] == "meta/llama3" for c in create.call_args_list)
+
+
+def test_default_routes_to_ollama_not_openai(monkeypatch):
+    client, create = _hosted_client()
+    monkeypatch.setattr("mortgage_calculator_book.llm._client", client)
+    ollama_mock = MagicMock(side_effect=_q_side_effect("ok"))
+    monkeypatch.setattr("mortgage_calculator_book.llm.ollama.chat", ollama_mock)
+
+    code = main(["hi"])
+
+    assert code == 0
+    assert create.call_count == 0  # the hosted client was never used
+    assert ollama_mock.call_count == 2  # the local path took both turns

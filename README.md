@@ -29,6 +29,11 @@ Uses [uv](https://github.com/astral-sh/uv) and requires Python ≥ 3.12.
 uv sync            # create the .venv and install dependencies
 ```
 
+The CLI and GUI need nothing else; the `mortgage-ask` LLM layer, though, reads its
+`OPENROUTER_API_KEY` from the environment (or an optional `.env`; see `.env.example`)
+and uses `HOSTED_MODEL` (from `config.py`) for the hosted backend. Copy `.env.example` to
+a `.env` and fill in the key, and for local mode install Ollama and run `ollama pull qwen3:8b`.
+
 ## Use it
 
 ### Command line
@@ -74,6 +79,37 @@ Options:
 | `--payments-per-year` | no       | `12`    | Payments per year (monthly by default) |
 | `--format`            | no       | `text`  | Output format: `text` or `json`        |
 
+### Desktop GUI
+
+The console script `mortgage-calculator-gui` opens a [PyQt5](https://www.riverbankcomputing.com/software/pyqt) window with the same four inputs (`mortgage_calculator_book.ui:main`):
+
+```bash
+uv run mortgage-calculator-gui
+```
+
+It needs a desktop display, and it is a thin shell over the same `calculate_validated_payment` core, so it agrees with the CLI. See [`docs/ui.md`](docs/ui.md) for the layout.
+
+### Ask the model
+
+`mortgage-ask` (`mortgage_calculator_book.llm_cli:main`) chats with a language model that answers a mortgage question by calling the shared `calculate_mortgage_payment` tool (`tool.py`) — the same code the CLI and GUI use. Pass a question as positional arguments for a one-off answer, or omit it for an interactive REPL (type `exit` or `quit` at the `>>>` prompt):
+
+```bash
+uv run mortgage-ask "What is my payment on a 200k, 6%, 30 year loan?"
+uv run mortgage-ask             # interactive: answer "exit" to stop
+```
+
+Two backends, selected by `--hosted`:
+
+* **local** (default) — an [Ollama](https://ollama.com) model on your machine, defaulting to `LOCAL_MODEL` (`qwen3:8b`).
+* **hosted** — [OpenRouter](https://openrouter.ai) via the OpenAI SDK, defaulting to `HOSTED_MODEL` from `config.py` (`qwen/qwen3.8-27b`).
+
+```bash
+uv run mortgage-ask --hosted "..."            # use the hosted model
+uv run mortgage-ask --model my/model "..."     # override the default for either backend
+```
+
+`--hosted` needs `OPENROUTER_API_KEY` in the environment (see [Install](#install)); local mode needs a running Ollama with the model pulled (`ollama pull qwen3:8b`). A model failure is reported on stderr: exit code 1 in single-shot mode, and a skipped question that the REPL continues past in interactive mode.
+
 ### As a library
 
 The core function is pure (no I/O); the validated input model is the supported
@@ -113,22 +149,30 @@ payments (`principal / n_payments`).
 
 ```text
 src/mortgage_calculator_book/
- __init__.py                     # package docstring / top-level module
- core.py                         # calculate_payment: the pure formula
- validation.py                   # MortgageInput (pydantic) + calculate_validated_payment entry point
- cli.py                          # argument parsing -> validation -> print (the console script)
-tests/                         # pytest: test_core.py, test_validation.py, conftest.py
-docs/derivation.md             # the formula and where it comes from
-SPEC.md                        # the spec this project is built against
+ __init__.py        # package docstring
+ core.py            # calculate_payment: the pure formula
+ validation.py      # MortgageInput (pydantic) + calculate_validated_payment
+ config.py          # OPENROUTER_API_KEY + HOSTED_MODEL, loaded from the environment (dotenv)
+ tool.py            # the calculate_mortgage_payment tool surface (name + JSON schema + call_tool)
+ llm.py             # ask_local (Ollama) and ask_hosted (OpenRouter/OpenAI)
+ llm_cli.py         # mortgage-ask: the LLM console script (--hosted / --model)
+ cli.py             # mortgage-calculator-book: argument parsing -> validation -> print
+ ui.py              # mortgage-calculator-gui: the PyQt5 desktop GUI
+tests/             # pytest: one file per module (core, validation, tool, llm, llm_cli, ui)
+docs/              # derivation.md (the math) and ui.md (the GUI layout)
+SPEC.md            # the spec this project is built against
 ```
 
-`config.py`, `.env.example`, and the `python-dotenv` / `requests` dependencies are
-scaffolding for later chapters; they are not wired into the calculator above.
+`config.py` loads `OPENROUTER_API_KEY` and `HOSTED_MODEL` from the environment (via
+`python-dotenv`, so an optional `.env` is picked up automatically). `tool.py` is the
+shared calculator surface the LLM layer calls; the calculator core, the GUI, and
+`llm.py` all reuse the same `calculate_validated_payment`, so any surface agrees.
+`requests` is still an unused dependency.
 
 ## Testing
 
 ```bash
-uv run pytest        # 28 tests
+uv run pytest        # 84 tests
 uv run ruff check    # lint
 ```
 

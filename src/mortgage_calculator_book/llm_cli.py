@@ -1,6 +1,6 @@
-"""Command-line harness for the local LLM mortgage calculator.
+"""Command-line harness for the local or hosted LLM mortgage calculator.
 
-Wraps :func:`mortgage_calculator_book.llm.ask_local` so a person can chat with
+Wraps the LLM askers in :mod:`mortgage_calculator_book.llm` so a person can chat with
 the model from a terminal: the model is offered the shared
 ``calculate_mortgage_payment`` tool and answers natural-language payment
 questions the same way the CLI and GUI do.
@@ -21,13 +21,18 @@ Two modes:
 A model/ollama failure is reported on stderr with a non-zero exit code in
 single-shot mode; in the REPL a failed question is printed to stderr but the
 next question is still asked - one bad answer never aborts the session.
+
+By default the local Ollama model is used. A ``--hosted`` flag switches to the
+hosted OpenRouter model, and ``--model`` overrides the default for whichever
+backend is selected (``LOCAL_MODEL`` locally, ``HOSTED_MODEL`` with --hosted).
 """
 
 import argparse
 import sys
 from functools import partial
 
-from mortgage_calculator_book.llm import LOCAL_MODEL, ask_local
+from mortgage_calculator_book.config import HOSTED_MODEL
+from mortgage_calculator_book.llm import LOCAL_MODEL, ask_hosted, ask_local
 
 STOP_COMMANDS = ("exit", "quit")
 
@@ -35,7 +40,7 @@ STOP_COMMANDS = ("exit", "quit")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Ask a natural-language mortgage question to the local LLM, which "
+             "Ask a natural-language mortgage question to the local or hosted LLM, which "
             "computes the answer with the shared calculator tool."
         )
     )
@@ -45,10 +50,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="The question to ask. Omit it to start an interactive session.",
     )
     parser.add_argument(
-        "--model",
-        default=LOCAL_MODEL,
-        help=f"Ollama model to use (default: {LOCAL_MODEL}).",
-    )
+         "--hosted",
+        action="store_true",
+        help="Use the hosted OpenRouter model instead of the local Ollama one.",
+      )
+    parser.add_argument(
+         "--model",
+        default=None,
+        help=(
+             "Override the model. Defaults to the local "
+             f"{LOCAL_MODEL} without --hosted, or the hosted {HOSTED_MODEL} with it."
+         ),
+      )
     return parser
 
 
@@ -79,7 +92,9 @@ def run_repl(ask, prompt: str = ">>> ") -> None:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    ask = partial(ask_local, model=args.model)
+    default_model = HOSTED_MODEL if args.hosted else LOCAL_MODEL
+    model = args.model if args.model is not None else default_model
+    ask = partial(ask_hosted, model=model) if args.hosted else partial(ask_local, model=model)
 
     question = " ".join(args.question).strip()
     if question:

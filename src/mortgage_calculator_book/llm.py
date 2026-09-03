@@ -51,7 +51,7 @@ def ask_local(question: str, model: str = LOCAL_MODEL) -> str:
     return second["message"]["content"]
 
 
-def ask_hosted(question: str) -> str:
+def ask_hosted(question: str, model: str = HOSTED_MODEL) -> str:
     # Same tool shape as ask_local — OpenAI's format and Ollama's happen
     # to agree here, which is part of why get_tool_definition() didn't
     # need to change to support a second client.
@@ -68,7 +68,7 @@ def ask_hosted(question: str) -> str:
     ]
 
     first = _client.chat.completions.create(
-        model=HOSTED_MODEL,
+        model=model,
         messages=[{"role": "user", "content": question}],
         tools=tools,
     )
@@ -89,7 +89,7 @@ def ask_hosted(question: str) -> str:
     # the specific call that requested it, and it expects the content as
     # an actual JSON string (json.dumps), not Python's str().
     second = _client.chat.completions.create(
-        model=HOSTED_MODEL,
+        model=model,
         messages=[
             {"role": "user", "content": question},
             message,
