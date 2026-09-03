@@ -16,13 +16,15 @@ The validators below instead raise a ValueError that names the offending
 parameter, so a rejected value always tells you which one broke.
 """
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from mortgage_calculator_book.core import calculate_payment
 
 
 class MortgageInput(BaseModel):
     """Validated mortgage input with per-parameter error messages."""
+    
+    model_config = ConfigDict(extra="forbid")
 
     principal: float
     annual_rate: float
