@@ -1,7 +1,7 @@
 [project]
 name = "mortgage-calculator-book"
 version = "0.1.0"
-description = "Add your description here"
+description = "Fixed periodic payment calculator for a fixed-rate mortgage"
 readme = "README.md"
 authors = [
     { name = "Robert Ioffe", email = "robert.ioffe@gmail.com" }
