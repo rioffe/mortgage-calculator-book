@@ -22,8 +22,8 @@ years, and a payment frequency.
 The computed payment, multiplied by n_payments, should equal the
 total amount paid over the life of the loan. For principal =
 $200,000, annual_rate = 0.06, term_years = 30, payments_per_year =
-12: payment should equal $1,199.10 (see Chapter 4.5 for the full
-derivation).
+12: payment should equal $1,199.10 (see docs/derivation.md for the
+full derivation).
 
 ## Out of scope
 - Variable-rate mortgages
