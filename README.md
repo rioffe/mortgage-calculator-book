@@ -89,6 +89,7 @@ print(f"{result:,.2f}")  # 1,199.10
 
 # Or call the raw, unvalidated core directly:
 from mortgage_calculator_book.core import calculate_payment
+
 calculate_payment(200_000, 0.06, 30, 12)  # ~1199.10
 ```
 
