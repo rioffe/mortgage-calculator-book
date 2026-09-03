@@ -39,6 +39,7 @@ def test_zero_term_rejected():
     with pytest.raises(ValidationError):
         MortgageInput(principal=200_000, annual_rate=0.06, term_years=0)
 
+
 def test_unexpected_field_rejected():
     with pytest.raises(ValidationError):
         MortgageInput(
