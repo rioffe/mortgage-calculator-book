@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 
 from pydantic import ValidationError
@@ -39,5 +40,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     payment = calculate_validated_payment(data)
-    print(f"Fixed periodic payment: ${payment:,.2f}")
+    if args.format == "json":
+        print(json.dumps({"payment": round(payment, 2)}))
+    else:
+        print(f"Fixed periodic payment: ${payment:,.2f}")
     return 0
