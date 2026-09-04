@@ -1,0 +1,72 @@
+[
+  {
+    "id": "basic-1",
+    "question": "What would my monthly payment be on a $200,000 loan at 6% interest over 30 years?",
+    "expected_tool_call": true,
+    "expected_arguments": {
+      "principal": 200000,
+      "annual_rate": 0.06,
+      "term_years": 30,
+      "payments_per_year": 12
+    }
+  },
+  {
+    "id": "zero-interest-1",
+    "question": "If I borrow $12,000 interest-free and pay it back monthly over a year, what's my payment?",
+    "expected_tool_call": true,
+    "expected_arguments": {
+      "principal": 12000,
+      "annual_rate": 0.0,
+      "term_years": 1,
+      "payments_per_year": 12
+    }
+  },
+  {
+    "id": "single-payment-1",
+    "question": "I want to pay off a $10,000 loan at 6% in one single payment a year from now. How much would that be?",
+    "expected_tool_call": true,
+    "expected_arguments": {
+      "principal": 10000,
+      "annual_rate": 0.06,
+      "term_years": 1,
+      "payments_per_year": 1
+    }
+  },
+  {
+    "id": "frequency-1",
+    "question": "Same $200,000 loan at 6% for 30 years, but if I paid biweekly instead of monthly, what would each payment be?",
+    "expected_tool_call": true,
+    "expected_arguments": {
+      "principal": 200000,
+      "annual_rate": 0.06,
+      "term_years": 30,
+      "payments_per_year": 26
+    }
+  },
+  {
+    "id": "missing-frequency-1",
+    "question": "What's the payment on a $150,000 loan at 5% over 15 years?",
+    "expected_tool_call": true,
+    "expected_arguments": {
+      "principal": 150000,
+      "annual_rate": 0.05,
+      "term_years": 15,
+      "payments_per_year": 12
+    }
+  },
+  {
+    "id": "out-of-scope-1",
+    "question": "What's the weather like today?",
+    "expected_tool_call": false
+  },
+  {
+    "id": "out-of-scope-2",
+    "question": "Can you help me figure out if refinancing my mortgage makes sense?",
+    "expected_tool_call": false
+  },
+  {
+    "id": "ambiguous-1",
+    "question": "How much would I pay each month?",
+    "expected_tool_call": false
+  }
+]
