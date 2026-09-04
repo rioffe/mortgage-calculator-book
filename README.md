@@ -29,7 +29,8 @@ Uses [uv](https://github.com/astral-sh/uv) and requires Python ≥ 3.12.
 uv sync            # create the .venv and install dependencies
 ```
 
-The CLI and GUI need nothing else; the `mortgage-ask` LLM layer, though, reads its
+The CLI's calculator path — and the GUI's Calculate / Clear — need nothing else. The LLM ask
+layer (the `mortgage-ask` command and the GUI's Ask button), though, reads its
 `OPENROUTER_API_KEY` from the environment (or an optional `.env`; see `.env.example`)
 and uses `HOSTED_MODEL` (from `config.py`) for the hosted backend. Copy `.env.example` to
 a `.env` and fill in the key, and for local mode install Ollama and run `ollama pull qwen3:8b`.
@@ -81,13 +82,14 @@ Options:
 
 ### Desktop GUI
 
-The console script `mortgage-calculator-gui` opens a [PyQt5](https://www.riverbankcomputing.com/software/pyqt) window with the same four inputs (`mortgage_calculator_book.ui:main`):
+The console script `mortgage-calculator-gui` opens a [PyQt5](https://www.riverbankcomputing.com/software/pyqt) window with the four inputs, a **Calculate / Clear** row, and an **Ask** row (`mortgage_calculator_book.ui:main`):
 
 ```bash
 uv run mortgage-calculator-gui
 ```
 
-It needs a desktop display, and it is a thin shell over the same `calculate_validated_payment` core, so it agrees with the CLI. See [`docs/ui.md`](docs/ui.md) for the layout.
+It needs a desktop display. Calculate and Clear are a thin shell over the same `calculate_validated_payment` core, so they agree with the CLI, and invalid input shows an error in place, never a crash.
+The Ask row sends a typed natural-language question to the local model (`ask_local`, Ollama) through the shared tool and shows the plain-language answer below the fields — so, like `mortgage-ask`, it wants a running Ollama with the model pulled; a failed or unavailable model is reported in the answer area, not a crash. See [`docs/ui.md`](docs/ui.md) for the full layout.
 
 ### Ask the model
 
@@ -157,7 +159,7 @@ src/mortgage_calculator_book/
  llm.py             # ask_local (Ollama) and ask_hosted (OpenRouter/OpenAI)
  llm_cli.py         # mortgage-ask: the LLM console script (--hosted / --model)
  cli.py             # mortgage-calculator-book: argument parsing -> validation -> print
- ui.py              # mortgage-calculator-gui: the PyQt5 desktop GUI
+ ui.py                # mortgage-calculator-gui: the PyQt5 desktop window (calculate, clear, and Ask)
 tests/             # pytest: one file per module (core, validation, tool, llm, llm_cli, ui)
 docs/              # derivation.md (the math) and ui.md (the GUI layout)
 SPEC.md            # the spec this project is built against
@@ -172,7 +174,7 @@ shared calculator surface the LLM layer calls; the calculator core, the GUI, and
 ## Testing
 
 ```bash
-uv run pytest        # 84 tests
+uv run pytest          # 88 tests
 uv run ruff check    # lint
 ```
 
