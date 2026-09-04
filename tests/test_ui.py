@@ -290,3 +290,64 @@ def test_widget_calculate_with_all_fields_invalid_does_not_crash(qapp):
     assert not result.ok
     assert w.error_label.text() != ""
     assert w.result_text() == "Fixed periodic payment: "
+
+
+# ---------------------------------------------------------------------------
+# Qt widget: Ask a question (Ask button / Enter -> ask_local -> answer area)
+# ---------------------------------------------------------------------------
+
+
+def test_widget_ask_button_displays_trimmed_answer(qapp, monkeypatch):
+    # Clicking Ask trims the typed question, sends it to ask_local, shows the reply.
+    w = build_widget()
+    monkeypatch.setattr(
+        "mortgage_calculator_book.ui.ask_local",
+        lambda question: f"answer to: {question}",
+    )
+    w.question_field.setText("  What is my payment?  ")
+
+    w.ask_button.click()   # clicked -> _on_ask -> ask_local
+
+    assert w.answer_area.toPlainText() == "answer to: What is my payment?"
+
+
+def test_widget_ask_enter_triggers_ask(qapp, monkeypatch):
+    # Pressing Enter in the question field asks, mirroring the calc fields.
+    w = build_widget()
+    monkeypatch.setattr("mortgage_calculator_book.ui.ask_local", lambda question: "hi")
+    w.question_field.setText("hello")
+
+    w.question_field.returnPressed.emit()   # Enter -> _on_ask
+
+    assert w.answer_area.toPlainText() == "hi"
+
+
+def test_widget_ask_empty_question_is_noop(qapp, monkeypatch):
+    # A blank question makes no model call and leaves the answer area empty.
+    calls = []
+    monkeypatch.setattr(
+        "mortgage_calculator_book.ui.ask_local",
+        lambda question: calls.append(question) or "answered",
+    )
+    w = build_widget()
+    w.question_field.setText("   ")
+
+    w.ask_button.click()   # must not call the model
+
+    assert calls == []
+    assert w.answer_area.toPlainText() == ""
+
+
+def test_widget_ask_reports_failure_in_place(qapp, monkeypatch):
+    # A model failure is shown in the answer area -- never a crash.
+    w = build_widget()
+
+    def _boom(question):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr("mortgage_calculator_book.ui.ask_local", _boom)
+    w.question_field.setText("anything")
+
+    w.ask_button.click()   # must not raise
+
+    assert w.answer_area.toPlainText() == "Could not answer: boom"

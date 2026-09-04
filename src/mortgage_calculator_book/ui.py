@@ -4,7 +4,9 @@ Built strictly from the "Desktop GUI" section of SPEC.md:
 
     inputs:    principal, annual rate, term (years), payments per year
     actions:   Calculate (computes + displays the payment),
-               Clear   (resets all fields and the result)
+               Clear     (resets all fields and the result),
+               Ask       (sends a natural-language question to the local
+                         model and shows its answer below the fields)
     errors:    invalid input shows an error message in place, not a crash
 
 The presentation layer is deliberately thin: all parsing, validation and
@@ -21,6 +23,7 @@ from dataclasses import dataclass
 from pydantic import ValidationError
 from PyQt5 import QtWidgets
 
+from mortgage_calculator_book.llm import ask_local
 from mortgage_calculator_book.validation import MortgageInput, calculate_validated_payment
 
 # Default payment frequency, per SPEC.md ("payments_per_year default: 12").
@@ -143,6 +146,13 @@ class MortgageCalculatorWidget(QtWidgets.QWidget):
         self.error_label.setStyleSheet("color: #b00000;")
         self.error_label.setWordWrap(True)
 
+        # Ask ------------------------------------------------------------------
+        self.question_field = QtWidgets.QLineEdit()
+        self.ask_button = QtWidgets.QPushButton("Ask")
+        self.answer_label = QtWidgets.QLabel("Answer:")
+        self.answer_area = QtWidgets.QPlainTextEdit()
+        self.answer_area.setReadOnly(True)
+
         # Build the layout -------------------------------------------------------
         self._build_layout()
         self._connect_signals()
@@ -159,11 +169,27 @@ class MortgageCalculatorWidget(QtWidgets.QWidget):
         buttons.addWidget(self.clear_button)
         buttons.addStretch(1)
 
+        # The Ask section sits below a divider, matching docs/ui.md: a question
+        # field with its Ask button, and an answer area underneath.
+        separator = QtWidgets.QFrame()
+        separator.setFrameShape(QtWidgets.QFrame.HLine)
+        separator.setFrameShadow(QtWidgets.QFrame.Plain)
+
+        ask_row = QtWidgets.QHBoxLayout()
+        ask_row.addWidget(self.question_field)
+        ask_row.addWidget(self.ask_button)
+        ask_form = QtWidgets.QFormLayout()
+        ask_form.addRow("Ask a question:", ask_row)
+
         layout = QtWidgets.QVBoxLayout()
         layout.addLayout(form)
         layout.addLayout(buttons)
         layout.addWidget(self.result_label)
         layout.addWidget(self.error_label)
+        layout.addWidget(separator)
+        layout.addLayout(ask_form)
+        layout.addWidget(self.answer_label)
+        layout.addWidget(self.answer_area)
         self.setLayout(layout)
 
     def _connect_signals(self) -> None:
@@ -172,6 +198,9 @@ class MortgageCalculatorWidget(QtWidgets.QWidget):
         # Pressing Enter in any free-text field triggers a calculation.
         for field in (self.principal_field, self.rate_field, self.term_field):
             field.returnPressed.connect(self._on_calculate)
+        self.ask_button.clicked.connect(self._on_ask)
+        # Pressing Enter in the question field asks, mirroring the calc fields.
+        self.question_field.returnPressed.connect(self._on_ask)
 
     def _on_calculate(self) -> None:
         """Signal slot for Calculate (button or Enter): run and refresh, discarding the result."""
@@ -209,6 +238,23 @@ class MortgageCalculatorWidget(QtWidgets.QWidget):
         self.payments_field.setValue(PAYMENTS_PER_YEAR_DEFAULT)
         self.result_label.setText("Fixed periodic payment: ")
         self.error_label.setText("")
+
+    def _on_ask(self) -> None:
+        """Ask slot: send the typed question to the local model and show it.
+
+        The call is isolated here so the model can be swapped or tested without
+        touching the layout. A model failure is reported in the answer area in
+        place -- never a crash -- matching the window's "never crash" invariant.
+        """
+        question = self.question_field.text().strip()
+        if not question:
+            return
+        try:
+            answer = ask_local(question)
+        except Exception as exc:    # network/model failure: report in place, never crash
+            self.answer_area.setPlainText(f"Could not answer: {exc}")
+            return
+        self.answer_area.setPlainText(answer)
 
     def result_text(self) -> str:
         """The current text of the result line (handy for tests)."""

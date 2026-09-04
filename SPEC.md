@@ -19,12 +19,15 @@ years, and a payment frequency.
 - payment: the fixed amount paid each period
 
 ## Interfaces
-- Command-line interface (human-readable and JSON output)
-- Desktop GUI:
-  - Inputs: principal, annual rate, term (years), payments per year
-  - Actions: Calculate (computes and displays the payment), Clear
-    (resets all fields and the result)
-  - Invalid input shows an error message in place, not a crash
+- Command-line interface (human-readable and JSON output; --ask
+  for a natural-language question, answered via the tool interface)
+- Desktop GUI (see docs/ui.md for the current layout):
+   - Inputs: principal, annual rate, term (years), payments per year
+   - Actions: Calculate, Clear, and Ask (a natural-language question,
+    answered via the tool interface)
+   - Invalid input shows an error message in place, not a crash
+- Tool interface for language-model use (see tool.py), supporting both
+  local and hosted models
 
 ## What "correct" means
 The computed payment, multiplied by n_payments, should equal the
